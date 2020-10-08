@@ -12,16 +12,23 @@
             <RowDefinition Height="1*"/>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="1*"/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Column="0" Grid.Row="0"/>
-        <TextBlock Grid.Column="0" Grid.Row="1" TextAlignment="Center">
-            Android アプリ「血圧のーと」が出力した CSV ファイルをここにドラッグしてください。<LineBreak />
-            「血圧のーと」については以下のURLを参照してください。<LineBreak />
+        <TextBlock Grid.Column="0" Grid.Row="1" TextAlignment="Left" HorizontalAlignment="Center">
+            【印刷の方法】<LineBreak />
+            1. Android アプリ「血圧のーと」が出力した CSV ファイルをここにドラッグしてください。<LineBreak />
+            2. 表示されたブラウザのページを印刷してください。(送信先:PDF, ページ:適宜指定, 用紙サイズ:B5, 1ページに4枚)<LineBreak />
+            3. 出力されたPDFファイルを印刷してください。(用紙サイズ:B4)<LineBreak />
         </TextBlock>
-        <TextBox Grid.Column="0" Grid.Row="2" IsReadOnly="True" HorizontalAlignment="Center" TextAlignment="Center" Padding="5">
+        <TextBlock Grid.Column="0" Grid.Row="2" TextAlignment="Center">
+            <LineBreak />
+            「血圧のーと」については以下のURLを参照してください。
+        </TextBlock>
+        <TextBox Grid.Column="0" Grid.Row="3" IsReadOnly="True" HorizontalAlignment="Center" TextAlignment="Center" Padding="5">
             https://play.google.com/store/apps/details?id=jp.gr.java_confi.kutze02.bloodpressure&amp;hl=ja
         </TextBox>
-        <TextBlock Grid.Column="0" Grid.Row="3"/>
+        <TextBlock Grid.Column="0" Grid.Row="4"/>
     </Grid>
 </Window>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace BloodPressureListFormatter
@@ -18,6 +19,14 @@ namespace BloodPressureListFormatter
         public MainWindow()
         {
             InitializeComponent();
+            Task.Run(() =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    foreach (var fileName in Environment.GetCommandLineArgs().Skip(1))
+                        GenerateDocument(fileName);
+                });
+            });
         }
 
         protected override void OnPreviewDragOver(DragEventArgs e)
@@ -36,118 +45,126 @@ namespace BloodPressureListFormatter
                 if (fileNames != null)
                 {
                     foreach (var fileName in fileNames)
-                    {
-                        if (File.Exists(fileName))
-                        {
-                            var outputFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(fileName), "output.html");
-                            GenerateDocument(fileName, outputFilePath);
-                            System.Diagnostics.Process.Start(outputFilePath);
-
-                        }
-                    }
+                        GenerateDocument(fileName);
                 }
+            }
+        }
+
+        private void GenerateDocument(string fileName)
+        {
+            if (File.Exists(fileName))
+            {
+                var outputFilePath = Path.Combine(Path.GetDirectoryName(fileName), "output.html");
+                GenerateDocument(fileName, outputFilePath);
+                System.Diagnostics.Process.Start(outputFilePath);
             }
         }
 
         private void GenerateDocument(string inputfilePath, string outputFilePath)
         {
-            var templatePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(GetType().Assembly.Location), "PageTemplate.html");
-            var headerTemplate = "";
-            var contentTemplate = "";
-            var delimiterTemplate = "";
-            var footerTemplate = "";
-            using (var reader = new StreamReader(templatePath, Encoding.UTF8))
+            try
             {
-                var headerTempleteSB = new StringBuilder();
-                var contentTempleteSB = new StringBuilder();
-                var delimiterTempleteSB = new StringBuilder();
-                var footerTempleteSB = new StringBuilder();
-                var targetSB = headerTempleteSB;
-                while (!reader.EndOfStream)
+                var templatePath = Path.Combine(Path.GetDirectoryName(GetType().Assembly.Location), "PageTemplate.html");
+                var headerTemplate = "";
+                var contentTemplate = "";
+                var delimiterTemplate = "";
+                var footerTemplate = "";
+                using (var reader = new StreamReader(templatePath, Encoding.UTF8))
                 {
-                    var text = reader.ReadLine();
-                    if (text == null)
-                        break;
-                    switch (text.Trim())
+                    var headerTempleteSB = new StringBuilder();
+                    var contentTempleteSB = new StringBuilder();
+                    var delimiterTempleteSB = new StringBuilder();
+                    var footerTempleteSB = new StringBuilder();
+                    var targetSB = headerTempleteSB;
+                    while (!reader.EndOfStream)
                     {
-                        case "<!--END OF HEADER-->":
-                            if (targetSB != headerTempleteSB)
-                                throw new Exception();
-                            targetSB = null;
+                        var text = reader.ReadLine();
+                        if (text == null)
                             break;
-                        case "<!--START OF DELIMITER-->":
-                            if (targetSB != null)
-                                throw new Exception();
-                            targetSB = delimiterTempleteSB;
-                            break;
-                        case "<!--END OF DELIMITER-->":
-                            if (targetSB != delimiterTempleteSB)
-                                throw new Exception();
-                            targetSB = null;
-                            break;
-                        case "<!--START OF CONTENT-->":
-                            if (targetSB != null)
-                                throw new Exception();
-                            targetSB = contentTempleteSB;
-                            break;
-                        case "<!--END OF CONTENT-->":
-                            if (targetSB != contentTempleteSB)
-                                throw new Exception();
-                            targetSB = null;
-                            break;
-                        case "<!--START OF FOOTER-->":
-                            if (targetSB != null)
-                                throw new Exception();
-                            targetSB = footerTempleteSB;
-                            break;
-                        default:
-                            targetSB.Append(text);
-                            targetSB.Append("\n");
-                            break;
-                    }
-                }
-                if (targetSB != footerTempleteSB)
-                    throw new Exception();
-                  headerTemplate = headerTempleteSB.ToString();
-                  contentTemplate = contentTempleteSB.ToString();
-                  delimiterTemplate = delimiterTempleteSB.ToString();
-                  footerTemplate = footerTempleteSB.ToString();
-            }
-            var contentTemplateValuePattern = new Regex(@"\${(?<keyword>[^_}]+)(_(?<day>[0-6\*]))?}", RegexOptions.Compiled);
-            using (var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8))
-            using (var parser = new CSVParser(inputfilePath, Encoding.GetEncoding("shift-jis"), CSVDelimiter.COMMA))
-            {
-                writer.Write(headerTemplate);
-                var rows = parser.GetRows();
-                var header = rows.First();
-                headerMap = Enumerable.Range(0, header.size).Select(index => new { index, title = header.getString(index) }).Where(item => !string.IsNullOrEmpty(item.title)).ToDictionary(item => item.title, item => item.index);
-                var dataRows = rows.Skip(1).ToDictionary(row => row.getDate(headerMap["日付"]), row => row);
-                var rowsOfWeeks = new List<ICSVRow>();
-                var firstDate = dataRows.Keys.Min();
-                var lastDate = dataRows.Keys.Max();
-                var isFirstPage = true;
-                for (var date = firstDate; date <= lastDate; date += TimeSpan.FromDays(7))
-                {
-                    if (!isFirstPage)
-                        writer.Write(delimiterTemplate);
-                    var rowsOfWeek =
-                        Enumerable.Range(0, 7)
-                        .Select(days =>
+                        switch (text.Trim())
                         {
-                            ICSVRow row;
-                            if (!dataRows.TryGetValue(date + TimeSpan.FromDays(days), out row))
-                                row = null;
-                            return row;
-                        })
-                        .ToArray();
-                    var content =
-                        contentTemplateValuePattern.Replace(
-                            contentTemplate,
-                            m => GetContentTemplateValue(rowsOfWeek, m));
-                    writer.Write(content);
-                    isFirstPage = false;
+                            case "<!--END OF HEADER-->":
+                                if (targetSB != headerTempleteSB)
+                                    throw new Exception();
+                                targetSB = null;
+                                break;
+                            case "<!--START OF DELIMITER-->":
+                                if (targetSB != null)
+                                    throw new Exception();
+                                targetSB = delimiterTempleteSB;
+                                break;
+                            case "<!--END OF DELIMITER-->":
+                                if (targetSB != delimiterTempleteSB)
+                                    throw new Exception();
+                                targetSB = null;
+                                break;
+                            case "<!--START OF CONTENT-->":
+                                if (targetSB != null)
+                                    throw new Exception();
+                                targetSB = contentTempleteSB;
+                                break;
+                            case "<!--END OF CONTENT-->":
+                                if (targetSB != contentTempleteSB)
+                                    throw new Exception();
+                                targetSB = null;
+                                break;
+                            case "<!--START OF FOOTER-->":
+                                if (targetSB != null)
+                                    throw new Exception();
+                                targetSB = footerTempleteSB;
+                                break;
+                            default:
+                                targetSB.Append(text);
+                                targetSB.Append("\n");
+                                break;
+                        }
+                    }
+                    if (targetSB != footerTempleteSB)
+                        throw new Exception();
+                    headerTemplate = headerTempleteSB.ToString();
+                    contentTemplate = contentTempleteSB.ToString();
+                    delimiterTemplate = delimiterTempleteSB.ToString();
+                    footerTemplate = footerTempleteSB.ToString();
                 }
-                writer.Write(footerTemplate);
+                var contentTemplateValuePattern = new Regex(@"\${(?<keyword>[^_}]+)(_(?<day>[0-6\*]))?}", RegexOptions.Compiled);
+                using (var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8))
+                using (var parser = new CSVParser(inputfilePath, Encoding.GetEncoding("shift-jis"), CSVDelimiter.COMMA))
+                {
+                    writer.Write(headerTemplate);
+                    var rows = parser.GetRows();
+                    var header = rows.First();
+                    headerMap = Enumerable.Range(0, header.size).Select(index => new { index, title = header.getString(index) }).Where(item => !string.IsNullOrEmpty(item.title)).ToDictionary(item => item.title, item => item.index);
+                    var dataRows = rows.Skip(1).ToDictionary(row => row.getDate(headerMap["日付"]), row => row);
+                    var rowsOfWeeks = new List<ICSVRow>();
+                    var firstDate = dataRows.Keys.Min();
+                    var lastDate = dataRows.Keys.Max();
+                    var isFirstPage = true;
+                    for (var date = firstDate; date <= lastDate; date += TimeSpan.FromDays(7))
+                    {
+                        if (!isFirstPage)
+                            writer.Write(delimiterTemplate);
+                        var rowsOfWeek =
+                            Enumerable.Range(0, 7)
+                            .Select(days =>
+                            {
+                                ICSVRow row;
+                                if (!dataRows.TryGetValue(date + TimeSpan.FromDays(days), out row))
+                                    row = null;
+                                return row;
+                            })
+                            .ToArray();
+                        var content =
+                            contentTemplateValuePattern.Replace(
+                                contentTemplate,
+                                m => GetContentTemplateValue(rowsOfWeek, m));
+                        writer.Write(content);
+                        isFirstPage = false;
+                    }
+                    writer.Write(footerTemplate);
+                }
+            }
+            catch (Exception)
+            {
             }
         }
 
