@@ -14,7 +14,18 @@ namespace BloodPressureListFormatter
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static IDictionary<string, int> headerMap;
+        private static DateTime _baseDate;
+
+        private IDictionary<string, int> _headerMap;
+
+        static MainWindow()
+        {
+            _baseDate = new DateTime(1970, 1, 4, 0, 0, 0, DateTimeKind.Local);
+#if DEBUG
+            if (_baseDate.DayOfWeek != DayOfWeek.Sunday)
+                throw new Exception();
+#endif
+        }
 
         public MainWindow()
         {
@@ -133,32 +144,44 @@ namespace BloodPressureListFormatter
                     writer.Write(headerTemplate);
                     var rows = parser.GetRows();
                     var header = rows.First();
-                    headerMap = Enumerable.Range(0, header.size).Select(index => new { index, title = header.getString(index) }).Where(item => !string.IsNullOrEmpty(item.title)).ToDictionary(item => item.title, item => item.index);
-                    var dataRows = rows.Skip(1).ToDictionary(row => row.getDate(headerMap["日付"]), row => row);
+                    _headerMap = Enumerable.Range(0, header.size).Select(index => new { index, title = header.getString(index) }).Where(item => !string.IsNullOrEmpty(item.title)).ToDictionary(item => item.title, item => item.index);
+                    var dataRows =
+                        rows
+                        .Skip(1)
+                        .Select(row => new { date = row.getDate(_headerMap["日付"]), row })
+                        .Where(item => item.date.HasValue)
+                        .ToDictionary(item => item.date.Value, item => item.row);
                     var rowsOfWeeks = new List<ICSVRow>();
                     var firstDate = dataRows.Keys.Min();
+                    var totalDays = (long)Math.Floor((firstDate - _baseDate).TotalDays + 0.5);
+                    if (totalDays < 0)
+                        throw new Exception();
+                    firstDate -= TimeSpan.FromDays(totalDays % 14);
                     var lastDate = dataRows.Keys.Max();
                     var isFirstPage = true;
-                    for (var date = firstDate; date <= lastDate; date += TimeSpan.FromDays(7))
+                    for (var startDate = firstDate; startDate <= lastDate; startDate += TimeSpan.FromDays(7 * 8))
                     {
-                        if (!isFirstPage)
-                            writer.Write(delimiterTemplate);
-                        var rowsOfWeek =
-                            Enumerable.Range(0, 7)
-                            .Select(days =>
-                            {
-                                ICSVRow row;
-                                if (!dataRows.TryGetValue(date + TimeSpan.FromDays(days), out row))
-                                    row = null;
-                                return row;
-                            })
-                            .ToArray();
-                        var content =
-                            contentTemplateValuePattern.Replace(
-                                contentTemplate,
-                                m => GetContentTemplateValue(rowsOfWeek, m));
-                        writer.Write(content);
-                        isFirstPage = false;
+                        foreach (var date in new[] { 0, 2, 4, 6, 3, 1, 7, 5 }.Select(weekOffset => startDate + TimeSpan.FromDays(7 * weekOffset)))
+                        {
+                            if (!isFirstPage)
+                                writer.Write(delimiterTemplate);
+                            var rowsOfWeek =
+                                Enumerable.Range(0, 7)
+                                .Select(days =>
+                                {
+                                    ICSVRow row;
+                                    if (!dataRows.TryGetValue(date + TimeSpan.FromDays(days), out row))
+                                        row = null;
+                                    return row;
+                                })
+                                .ToArray();
+                            var content =
+                                contentTemplateValuePattern.Replace(
+                                    contentTemplate,
+                                    m => GetContentTemplateValue(date, rowsOfWeek, m));
+                            writer.Write(content);
+                            isFirstPage = false;
+                        }
                     }
                     writer.Write(footerTemplate);
                 }
@@ -168,7 +191,7 @@ namespace BloodPressureListFormatter
             }
         }
 
-        private string GetContentTemplateValue(ICSVRow[] rowsOfWeek, Match m)
+        private string GetContentTemplateValue(DateTime date, ICSVRow[] rowsOfWeek, Match m)
         {
             var keyword = m.Groups["keyword"].Value;
             int dayOfWeek = -1;
@@ -183,29 +206,25 @@ namespace BloodPressureListFormatter
                 case "開始日":
                     if (dayOfWeek >= 0)
                         throw new Exception();
-                    if (rowsOfWeek[0] == null)
-                        return "";
-                    if (rowsOfWeek[0] == null)
-                        return "";
-                    return rowsOfWeek[0].getDate(headerMap["日付"])?.ToString("yyyy年M月d日") ?? "";
+                    return date.ToString("yyyy年M月d日");
                 case "日付":
                     if (dayOfWeek < 0)
                         throw new Exception();
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "/";
-                    return rowsOfWeek[dayOfWeek].getDate(headerMap["日付"])?.ToString("M/d") ?? "/";
+                    return rowsOfWeek[dayOfWeek].getDate(_headerMap["日付"])?.ToString("M/d") ?? "/";
                 case "曜日":
                     if (dayOfWeek < 0)
                         throw new Exception();
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "&nbsp;&nbsp;";
-                    return rowsOfWeek[dayOfWeek].getDate(headerMap["日付"])?.ToString("ddd") ?? "&nbsp;&nbsp;";
+                    return rowsOfWeek[dayOfWeek].getDate(_headerMap["日付"])?.ToString("ddd") ?? "&nbsp;&nbsp;";
                 case "最高血圧朝1":
                     if (dayOfWeek < 0)
                         throw new Exception();
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "";
-                    return rowsOfWeek[dayOfWeek].getDoule(headerMap["最高血圧（朝）"])?.ToString("F0") ?? "";
+                    return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最高血圧（朝）"])?.ToString("F0") ?? "";
                 case "最高血圧朝2":
                     return "";
                 case "最高血圧朝平均":
@@ -213,7 +232,7 @@ namespace BloodPressureListFormatter
                     {
                         var rows = rowsOfWeek.Where(row => row != null);
                         if (rows.Any())
-                            return rows.Average(row => row.getDoule(headerMap["最高血圧（朝）"]))?.ToString("F0") ?? "";
+                            return rows.Average(row => row.getDoule(_headerMap["最高血圧（朝）"]))?.ToString("F0") ?? "";
                         else
                             return "";
                     }
@@ -221,14 +240,14 @@ namespace BloodPressureListFormatter
                     {
                         if (rowsOfWeek[dayOfWeek] == null)
                             return "";
-                        return rowsOfWeek[dayOfWeek].getDoule(headerMap["最高血圧（朝）"])?.ToString("F0") ?? "";
+                        return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最高血圧（朝）"])?.ToString("F0") ?? "";
                     }
                 case "最高血圧夜1":
                     if (dayOfWeek < 0)
                         throw new Exception();
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "";
-                    return rowsOfWeek[dayOfWeek].getDoule(headerMap["最高血圧（夜）"])?.ToString("F0") ?? "";
+                    return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最高血圧（夜）"])?.ToString("F0") ?? "";
                 case "最高血圧夜2":
                     return "";
                 case "最高血圧夜平均":
@@ -236,7 +255,7 @@ namespace BloodPressureListFormatter
                     {
                         var rows = rowsOfWeek.Where(row => row != null);
                         if (rows.Any())
-                            return rows.Average(row => row.getDoule(headerMap["最高血圧（夜）"]))?.ToString("F0") ?? "";
+                            return rows.Average(row => row.getDoule(_headerMap["最高血圧（夜）"]))?.ToString("F0") ?? "";
                         else
                             return "";
                     }
@@ -244,14 +263,14 @@ namespace BloodPressureListFormatter
                     {
                         if (rowsOfWeek[dayOfWeek] == null)
                             return "";
-                        return rowsOfWeek[dayOfWeek].getDoule(headerMap["最高血圧（夜）"])?.ToString("F0") ?? "";
+                        return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最高血圧（夜）"])?.ToString("F0") ?? "";
                     }
                 case "最低血圧朝1":
                     if (dayOfWeek < 0)
                         throw new Exception();
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "";
-                    return rowsOfWeek[dayOfWeek].getDoule(headerMap["最低血圧（朝）"])?.ToString("F0") ?? "";
+                    return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最低血圧（朝）"])?.ToString("F0") ?? "";
                 case "最低血圧朝2":
                     return "";
                 case "最低血圧朝平均":
@@ -259,7 +278,7 @@ namespace BloodPressureListFormatter
                     {
                         var rows = rowsOfWeek.Where(row => row != null);
                         if (rows.Any())
-                            return rows.Average(row => row.getDoule(headerMap["最低血圧（朝）"]))?.ToString("F0") ?? "";
+                            return rows.Average(row => row.getDoule(_headerMap["最低血圧（朝）"]))?.ToString("F0") ?? "";
                         else
                             return "";
                     }
@@ -267,14 +286,14 @@ namespace BloodPressureListFormatter
                     {
                         if (rowsOfWeek[dayOfWeek] == null)
                             return "";
-                        return rowsOfWeek[dayOfWeek].getDoule(headerMap["最低血圧（朝）"])?.ToString("F0") ?? "";
+                        return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最低血圧（朝）"])?.ToString("F0") ?? "";
                     }
                 case "最低血圧夜1":
                     if (dayOfWeek < 0)
                         throw new Exception();
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "";
-                    return rowsOfWeek[dayOfWeek].getDoule(headerMap["最低血圧（夜）"])?.ToString("F0") ?? "";
+                    return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最低血圧（夜）"])?.ToString("F0") ?? "";
                 case "最低血圧夜2":
                     return "";
                 case "最低血圧夜平均":
@@ -282,7 +301,7 @@ namespace BloodPressureListFormatter
                     {
                         var rows = rowsOfWeek.Where(row => row != null);
                         if (rows.Any())
-                            return rows.Average(row => row.getDoule(headerMap["最低血圧（夜）"]))?.ToString("F0") ?? "";
+                            return rows.Average(row => row.getDoule(_headerMap["最低血圧（夜）"]))?.ToString("F0") ?? "";
                         else
                             return "";
                     }
@@ -290,7 +309,7 @@ namespace BloodPressureListFormatter
                     {
                         if (rowsOfWeek[dayOfWeek] == null)
                             return "";
-                        return rowsOfWeek[dayOfWeek].getDoule(headerMap["最低血圧（夜）"])?.ToString("F0") ?? "";
+                        return rowsOfWeek[dayOfWeek].getDoule(_headerMap["最低血圧（夜）"])?.ToString("F0") ?? "";
                     }
                 case "脈拍1":
                     if (dayOfWeek < 0)
@@ -301,8 +320,8 @@ namespace BloodPressureListFormatter
                         var validValues =
                             new[]
                             {
-                                rowsOfWeek[dayOfWeek].getDoule(headerMap["心拍（朝）"]),
-                                rowsOfWeek[dayOfWeek].getDoule(headerMap["心拍（夜）"]),
+                                rowsOfWeek[dayOfWeek].getDoule(_headerMap["心拍（朝）"]),
+                                rowsOfWeek[dayOfWeek].getDoule(_headerMap["心拍（夜）"]),
                             }
                             .Where(n => n.HasValue);
                         if (!validValues.Any())

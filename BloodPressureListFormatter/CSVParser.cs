@@ -148,10 +148,11 @@ namespace BloodPressureListFormatter
                 public DateTime? getDate(int index)
                 {
                     DateTime value;
-                    if (DateTime.TryParse(_columns[index], out value))
-                        return value;
-                    else
+                    if (!DateTime.TryParse(_columns[index], out value))
                         return null;
+                    if (value.Kind == DateTimeKind.Unspecified)
+                        value = new DateTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, DateTimeKind.Local);
+                    return value.ToLocalTime();
                 }
 
                 public override string ToString()
@@ -294,12 +295,12 @@ namespace BloodPressureListFormatter
                     {
                         if (disposing)
                         {
-                        }
-                        if (_reader != null)
-                        {
-                            _parser = null;
-                            _reader.Dispose();
-                            _reader = null;
+                            if (_reader != null)
+                            {
+                                _parser = null;
+                                _reader.Dispose();
+                                _reader = null;
+                            }
                         }
                         _isDisposed = true;
                     }
