@@ -19,7 +19,7 @@
         <TextBlock Grid.Column="0" Grid.Row="1" TextAlignment="Left" HorizontalAlignment="Center">
             【印刷の方法】<LineBreak />
             1. Android アプリ「血圧のーと」が出力した CSV ファイルをここにドラッグしてください。<LineBreak />
-            2. 表示されたブラウザのページを印刷してください。(送信先:PDF, ページ:適宜指定, 用紙サイズ:B5, 1ページに4枚)<LineBreak />
+            2. 表示されたブラウザのページを印刷してください。(送信先:PDF, ページ:開始ページは 8 × n + 1, 用紙サイズ:B5, 1ページに4枚)<LineBreak />
             3. 出力されたPDFファイルを印刷してください。(用紙サイズ:B4, 両面印刷(左右綴じ))<LineBreak />
         </TextBlock>
         <TextBlock Grid.Column="0" Grid.Row="2" TextAlignment="Center">
