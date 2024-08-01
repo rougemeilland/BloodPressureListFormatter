@@ -317,12 +317,24 @@ namespace BloodPressureListFormatter
                     if (rowsOfWeek[dayOfWeek] == null)
                         return "";
                     {
+                        if (!_headerMap.TryGetValue("脈拍（朝）", out var morningIndex)
+                            && !_headerMap.TryGetValue("心拍（朝）", out morningIndex))
+                        {
+                            return "";
+                        }
+
+                        if (!_headerMap.TryGetValue("脈拍（夜）", out var nightIndex)
+                            && !_headerMap.TryGetValue("心拍（夜）", out nightIndex))
+                        {
+                            return "";
+                        }
+
                         var validValues =
-                            new[]
+                            (new[]
                             {
-                                rowsOfWeek[dayOfWeek].getDoule(_headerMap["心拍（朝）"]),
-                                rowsOfWeek[dayOfWeek].getDoule(_headerMap["心拍（夜）"]),
-                            }
+                                rowsOfWeek[dayOfWeek].getDoule(morningIndex),
+                                rowsOfWeek[dayOfWeek].getDoule(nightIndex),
+                            })
                             .Where(n => n.HasValue);
                         if (!validValues.Any())
                             return "";
