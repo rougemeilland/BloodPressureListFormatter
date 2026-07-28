@@ -6,29 +6,97 @@
         xmlns:local="clr-namespace:BloodPressureListFormatter"
         mc:Ignorable="d"
         AllowDrop="True"
-        Title="血圧記録フォーマッタ" Height="450" Width="800">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="1*"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="1*"/>
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Column="0" Grid.Row="0"/>
+        Title="血圧記録フォーマッタ" Height="500" Width="800">
+    <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <!--
         <TextBlock Grid.Column="0" Grid.Row="1" TextAlignment="Left" HorizontalAlignment="Center">
             【印刷の方法】<LineBreak />
             1. Android アプリ「血圧のーと」が出力した CSV ファイルをここにドラッグしてください。<LineBreak />
             2. 表示されたブラウザのページを印刷してください。(送信先:PDF, ページ:開始ページは 8 × n + 1, 用紙サイズ:B5, 1ページに4枚)<LineBreak />
             3. 出力されたPDFファイルを印刷してください。(用紙サイズ:B4, 両面印刷(左右綴じ))<LineBreak />
         </TextBlock>
-        <TextBlock Grid.Column="0" Grid.Row="2" TextAlignment="Center">
-            <LineBreak />
-            「血圧のーと」については以下のURLを参照してください。
-        </TextBlock>
-        <TextBox Grid.Column="0" Grid.Row="3" IsReadOnly="True" HorizontalAlignment="Center" TextAlignment="Center" Padding="5">
-            https://play.google.com/store/apps/details?id=jp.gr.java_confi.kutze02.bloodpressure&amp;hl=ja
-        </TextBox>
-        <TextBlock Grid.Column="0" Grid.Row="4"/>
-    </Grid>
+        -->
+        <RichTextBox Grid.Row="0" IsReadOnly="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <FlowDocument>
+                <Paragraph>
+                    <Run FontSize="20" FontWeight="Bold" Text="【印刷の方法】"/>
+                </Paragraph>
+                <List MarkerStyle="Decimal">
+                    <ListItem>
+                        <Paragraph>
+                            <Run Text="Android アプリ「血圧のーと」が出力した CSV ファイルを"/>
+                            <Run Foreground="Blue" FontWeight="Bold" Text="この画面に"/>
+                            <Run Text="ドラッグ&amp;ドロップしてください。"/>
+                        </Paragraph>
+                    </ListItem>
+                    <ListItem>
+                        <Paragraph>
+                            <Run Text="表示されたブラウザのページを印刷してください。"/>
+                        </Paragraph>
+                        <List MarkerStyle="Disc">
+                            <ListItem>
+                                <Paragraph>
+                                    <Run Text="送信先は"/>
+                                    <Run FontWeight="Bold" Foreground="Blue" Text="PDF"/>
+                                </Paragraph>
+                            </ListItem>
+                            <ListItem>
+                                <Paragraph>
+                                    <Run Text="開始ページは"/>
+                                    <Run FontWeight="Bold" Foreground="Blue" Text="8の倍数+1"/>
+                                </Paragraph>
+                            </ListItem>
+                            <ListItem>
+                                <Paragraph>
+                                    <Run Text="1枚あたりのページ数は"/>
+                                    <Run FontWeight="Bold" Foreground="Blue" Text="4
+                                         "/>
+                                </Paragraph>
+                            </ListItem>
+                        </List>
+                    </ListItem>
+                    <ListItem>
+                        <Paragraph>
+                            <Run Text="出力されたPDFファイルを印刷してください。"/>
+                        </Paragraph>
+                        <List MarkerStyle="Disc">
+                            <ListItem>
+                                <Paragraph>
+                                    <Run Text="用紙サイズ: "/>
+                                    <Run FontWeight="Bold" Foreground="Blue" Text="B4"/>
+                                </Paragraph>
+                            </ListItem>
+                            <ListItem>
+                                <Paragraph>
+                                    <Run FontWeight="Bold" Foreground="Blue" Text="両面印刷(長辺綴じ あるいは 左右綴じ)"/>
+                                </Paragraph>
+                            </ListItem>
+                        </List>
+                    </ListItem>
+                </List>
+                <Paragraph>
+                    <Run FontSize="20" FontWeight="Bold" Text="【注意事項】"/>
+                </Paragraph>
+                <List MarkerStyle="Disc">
+                    <ListItem>
+                        <Paragraph>
+                            <Run Text="「血圧のーと」でCSVファイルを出力する際に、"/>
+                            <Run Foreground="Red" Text="必ず"/>
+                            <Run Foreground="Red" FontWeight="Bold" Text="「脈拍」"/>
+                            <Run Foreground="Red" Text="を含めてください。"/>
+                        </Paragraph>
+                    </ListItem>
+                </List>
+                <Paragraph>
+                    <Run FontSize="20" FontWeight="Bold" Text="【「血圧のーと」について】"/>
+                </Paragraph>
+                <Paragraph>
+                    <Run Text="「血圧のーと」については以下のURLを参照してください。"/>
+                </Paragraph>
+                <Paragraph>
+                    <Run Text="https://play.google.com/store/apps/details?id=jp.gr.java_confi.kutze02.bloodpressure&amp;hl=ja"/>
+                </Paragraph>
+            </FlowDocument>
+        </RichTextBox>
+    </StackPanel>
 </Window>
