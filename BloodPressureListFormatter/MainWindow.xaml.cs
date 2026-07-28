@@ -72,11 +72,6 @@ namespace BloodPressureListFormatter
             }
         }
 
-        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
-        {
-
-        }
-
         private void GenerateDocument(string fileName)
         {
             if (File.Exists(fileName))
